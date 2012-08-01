@@ -5,7 +5,6 @@ namespace OpenGlobe.Sample
     using Android.Content;
     using Android.Graphics;
     using Android.Opengl;
-    using Android.Runtime;
     using Android.Util;
     using Android.Views;
 
@@ -17,27 +16,14 @@ namespace OpenGlobe.Sample
 
         private const float MaxFOV = 100.0f;
 
-        private static float mZoom;
-
-        private static float mLastZoom;
-
-        private static float mOldDist;
-
-        private static float mStartFOV;
-
-        private static float mCurrentFOV;
-
-        private static Vector2 mCurrentTouchPoint;
-
-        private static Vector2 mMidPoint;
-
-        private static Vector2 mLastTouchPoint;
-
         private float density;
-
+        private float startFOV;
         private OpenGlobeRenderer renderer;
+        private GestureListener gestureListener;
 
-        private TransformMode mGesture = TransformMode.None;
+        private bool canScroll;
+
+        private float lastAngle;
 
         public GlobeSurfaceView(Context context)
             : base(context)
@@ -51,81 +37,89 @@ namespace OpenGlobe.Sample
             this.Init(context);
         }
 
-        private void Init(Context context)
-        {
-            this.density = context.Resources.DisplayMetrics.Density;
-            this.SetEGLConfigChooser(8, 8, 8, 8, 16, 0);
-            this.Holder.SetFormat(Format.Rgba8888);
-
-            this.renderer = new OpenGlobeRenderer(context);
-
-            this.SetRenderer(this.renderer);
-        }
-
         public void UpdateTexture(string fn)
         {
             this.renderer.UpdateTexture(fn);
         }
 
-        public override bool OnTouchEvent(MotionEvent ev)
+        public override bool OnTouchEvent(MotionEvent e)
         {
-            bool retval = true;
-
-            switch (ev.Action & MotionEventActions.Mask)
-            {
-                case MotionEventActions.Down:
-                    this.mGesture = TransformMode.Drag;
-                    mLastTouchPoint.X = mCurrentTouchPoint.X = ev.GetX();
-                    mLastTouchPoint.Y = mCurrentTouchPoint.Y = ev.GetY();
-                    break;
-
-                case MotionEventActions.Up:
-                case MotionEventActions.PointerUp:
-                    this.mGesture = TransformMode.None;
-                    mLastTouchPoint.X = ev.GetX();
-                    mLastTouchPoint.Y = ev.GetY();
-                    break;
-
-                case MotionEventActions.PointerDown:
-                    mOldDist = Spacing(ev);
-                    mMidPoint = MidPoint(ev);
-
-                    this.mGesture = TransformMode.Zoom;
-                    mStartFOV = this.renderer.FieldOfView;
-
-                    mLastTouchPoint.X = mMidPoint.X;
-                    mLastTouchPoint.Y = mMidPoint.Y;
-                    mCurrentTouchPoint.X = mMidPoint.X;
-                    mCurrentTouchPoint.Y = mMidPoint.Y;
-
-                    break;
-
-                case MotionEventActions.Move:
-                    if (this.mGesture == TransformMode.Drag)
-                    {
-                        retval = this.HandleDragGesture(ev);
-                    }
-                    else if (this.mGesture == TransformMode.Zoom)
-                    {
-                        retval = this.HandlePinchGesture(ev);
-                    }
-                    break;
-            }
-
-            return retval;
+            return this.gestureListener.OnTouchEvent(e) || base.OnTouchEvent(e);
         }
 
-        public bool HandleDragGesture(MotionEvent ev)
+        private void Init(Context context)
         {
-            mLastTouchPoint.X = mCurrentTouchPoint.X;
-            mLastTouchPoint.Y = mCurrentTouchPoint.Y;
+            this.density = context.Resources.DisplayMetrics.Density;
+            this.SetEGLConfigChooser(8, 8, 8, 8, 16, 0);
+            this.Holder.SetFormat(Format.Rgba8888);
+            
+            this.gestureListener = new GestureListener(context);
+            this.renderer = new OpenGlobeRenderer(context);
 
-            mCurrentTouchPoint.X = ev.GetX();
-            mCurrentTouchPoint.Y = ev.GetY();
+            this.SetRenderer(this.renderer);
 
-            this.renderer.Rotate(mCurrentTouchPoint, mLastTouchPoint, this.density);
+            this.gestureListener.Scroll += OnScroll;
+            this.gestureListener.Scale += OnScale;
+            this.gestureListener.Down += OnDown;
+            this.gestureListener.Move += OnMove;
 
-            return true;
+            this.gestureListener.PointerCountChanged += OnPointerCountChanged;
+        }
+
+        private void OnMove(object sender, TouchEventArgs e)
+        {
+            if (e.Event.PointerCount > 1)
+            {
+                var angle = GetRotation(e.Event);
+                Console.WriteLine(angle - this.lastAngle);
+                this.renderer.Rotate(this.lastAngle - angle, this.density);
+                this.lastAngle = angle;
+            }
+        }
+
+        private static float GetRotation(MotionEvent e)
+        {
+            var deltaX = e.GetX(0) - e.GetX(1);
+            var deltaY = e.GetY(0) - e.GetY(1);
+            var radians = (float)Math.Atan2(deltaY, deltaX);
+
+            return MathHelper.RadiansToDegrees(radians);
+        }
+
+        private void OnPointerCountChanged(object sender, PointerCountChangedEventArgs e)
+        {
+            this.canScroll = this.canScroll && e.NewCount != 1;
+            if (e.OldCount < e.NewCount && e.NewCount > 1)
+            {
+                this.lastAngle = GetRotation(e.Event);
+            }
+        }
+
+        private void OnDown(object sender, TouchEventArgs e)
+        {
+            this.startFOV = this.renderer.FieldOfView;
+            this.canScroll = true;
+        }
+
+        private void OnScale(object sender, ScaleGestureDetector.ScaleEventArgs ev)
+        {
+            var zoom = ev.Detector.PreviousSpan / ev.Detector.CurrentSpan;
+            var current = this.startFOV * zoom;
+            if (current >= MinFOV && current <= MaxFOV)
+            {
+                this.renderer.FieldOfView = current;
+            }
+        }
+
+        private void OnScroll(object sender, GestureDetector.ScrollEventArgs e)
+        {
+            if (this.canScroll)
+            {
+                var distance = new Vector2(-e.DistanceX, -e.DistanceY);
+
+                this.renderer.Rotate(distance, this.density);
+                e.Handled = true;
+            }
         }
 
         protected override void OnSizeChanged(int w, int h, int oldw, int oldh)
@@ -133,48 +127,6 @@ namespace OpenGlobe.Sample
             base.OnSizeChanged(w, h, oldw, oldh);
 
             this.renderer.ViewPortSize = new Vector2(w, h);
-        }
-
-        public bool HandlePinchGesture(MotionEvent ev)
-        {
-            float newDist = Spacing(ev);
-
-            mZoom = mOldDist / newDist;
-
-            if (mZoom > mLastZoom)
-            {
-                mLastZoom = mZoom;
-            }
-            else if (mZoom <= mLastZoom)
-            {
-                mLastZoom = mZoom;
-            }
-
-            mCurrentFOV = mStartFOV * mZoom;
-            mLastTouchPoint = mMidPoint;
-
-            if (mCurrentFOV >= MinFOV && mCurrentFOV <= MaxFOV)
-            {
-                this.renderer.FieldOfView = mCurrentFOV;
-
-                return true;
-            }
-
-            return false;
-        }
-
-        private static float Spacing(MotionEvent e)
-        {
-            float x = e.GetX(0) - e.GetX(1);
-            float y = e.GetY(0) - e.GetY(1);
-            return (float)Math.Sqrt(x * x + y * y);
-        }
-
-        private static Vector2 MidPoint(MotionEvent e)
-        {
-            float x = e.GetX(0) + e.GetX(1);
-            float y = e.GetY(0) + e.GetY(1);
-            return new Vector2(x / 2, y / 2);
         }
     }
 }

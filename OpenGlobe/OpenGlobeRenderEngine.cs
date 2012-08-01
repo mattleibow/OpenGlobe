@@ -10,7 +10,7 @@ namespace OpenGlobe
     {
         private const float ClippingNear = 0.1f;
         private const float ClippingDistance = 20F;
-        private const float DefaultFieldOfView = 30.0F;
+        public const float DefaultFieldOfView = 30.0F;
         private const All FillLight1 = All.Light1;
         private const All FillLight2 = All.Light2;
 
@@ -95,14 +95,13 @@ namespace OpenGlobe
         /// <summary>
         /// Rotate the globe.
         /// </summary>
-        /// <param name="current"></param>
-        /// <param name="last"></param>
+        /// <param name="distance"></param>
         /// <param name="density"></param>
-        public void Rotate(Vector2 current, Vector2 last, float density)
+        public void Rotate(Vector2 distance, float density)
         {          
             // the amount moved by the user
-            float deltaX = (current.X - last.X) / density / 4F;
-            float deltaY = (current.Y - last.Y) / density / 4F;
+            float deltaX = distance.X / density / 4F;
+            float deltaY = distance.Y / density / 4F;
 
             // get rotations
             var rotationY = Matrix4.CreateRotationY(MathHelper.DegreesToRadians(deltaX));
@@ -114,6 +113,18 @@ namespace OpenGlobe
 
             // apply temps to global rotation
             this.rotation = Matrix4.Mult(this.rotation, afterX);
+        }
+
+        public void Rotate(float angle, float density)
+        {
+            // the amount moved by the user
+            float delta = angle / density;
+
+            // get rotation
+            var rot = Matrix4.CreateRotationZ(MathHelper.DegreesToRadians(delta));
+
+            // apply temps to global rotation
+            this.rotation = Matrix4.Mult(this.rotation, rot);
         }
 
         /// <summary>

@@ -64,7 +64,7 @@ namespace OpenGlobe.Sample
             {
                 var tmp = this.nextTexture;
                 this.nextTexture = null;
-                Utils.BindAsset(this.engine.Planet.TextureId, this.context, tmp);
+                Utils.BindTextureAsset(this.engine.Planet.TextureId, this.context, tmp);
             }
 
             this.engine.RenderFrame();
@@ -84,9 +84,14 @@ namespace OpenGlobe.Sample
 
         #endregion
 
-        public void Rotate(Vector2 current, Vector2 last, float density)
+        public void Rotate(Vector2 distance, float density)
         {
-            this.engine.Rotate(current, last, density);
+            this.engine.Rotate(distance, density);
+        }
+
+        public void Rotate(float angle, float density)
+        {
+            this.engine.Rotate(angle, density);
         }
 
         private void SetupPlanet()

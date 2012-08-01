@@ -1,7 +1,7 @@
 namespace OpenGlobe
 {
     using System;
-
+    using System.IO;
     using Android.Content;
     using Android.Graphics;
     using Android.Opengl;
@@ -12,23 +12,39 @@ namespace OpenGlobe
 
     public static class Utils
     {
+        public static int CreateNullTexture()
+        {
+            int textureId;
+            GL.GenTextures(1, out textureId);
+            return textureId;
+        }
+
         public static int CreateResourceTexture(Context context, int resource, bool useMipmapping = false)
         {
             int textureId;
             GL.GenTextures(1, out textureId);
-            BindResource(textureId, context, resource, useMipmapping);
+            BindTextureResource(textureId, context, resource, useMipmapping);
             return textureId;
+        }
+
+        public static void BindTextureResource(int textureId, Context context, int resource, bool useMipmapping = false)
+        {
+            using (var image = BitmapFactory.DecodeResource(context.Resources, resource))
+            {
+                BindTexture(textureId, image, useMipmapping);
+                image.Recycle();
+            }
         }
 
         public static int CreateAssetTexture(Context context, string filename, bool useMipmapping = false)
         {
             int textureId;
             GL.GenTextures(1, out textureId);
-            BindAsset(textureId, context, filename, useMipmapping);
+            BindTextureAsset(textureId, context, filename, useMipmapping);
             return textureId;
         }
 
-        public static void BindAsset(int textureId, Context context, string filename, bool useMipmapping = false)
+        public static void BindTextureAsset(int textureId, Context context, string filename, bool useMipmapping = false)
         {
             using (var stream = context.Assets.Open(filename))
             using (var image = BitmapFactory.DecodeStream(stream))
@@ -38,9 +54,34 @@ namespace OpenGlobe
             }
         }
 
-        public static void BindResource(int textureId, Context context, int resource, bool useMipmapping = false)
+        public static int CreateStreamTexture(Stream stream, bool useMipmapping = false)
         {
-            using (var image = BitmapFactory.DecodeResource(context.Resources, resource))
+            int textureId;
+            GL.GenTextures(1, out textureId);
+            BindTextureStream(textureId, stream, useMipmapping);
+            return textureId;
+        }
+
+        public static void BindTextureStream(int textureId, Stream stream, bool useMipmapping = false)
+        {
+            using (var image = BitmapFactory.DecodeStream(stream))
+            {
+                BindTexture(textureId, image, useMipmapping);
+                image.Recycle();
+            }
+        }
+
+        public static int CreateFileTexture(string filename, bool useMipmapping = false)
+        {
+            int textureId;
+            GL.GenTextures(1, out textureId);
+            BindTextureFile(textureId, filename, useMipmapping);
+            return textureId;
+        }
+
+        public static void BindTextureFile(int textureId, string filename, bool useMipmapping = false)
+        {
+            using (var image = BitmapFactory.DecodeFile(filename))
             {
                 BindTexture(textureId, image, useMipmapping);
                 image.Recycle();

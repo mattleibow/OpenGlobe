@@ -42,13 +42,14 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ByteBuffer.cs" />
+    <Compile Include="GestureListener.cs" />
     <Compile Include="GlobeOverlay.cs" />
     <Compile Include="Matrix4Extensions.cs" />
     <Compile Include="Miniglu.cs" />
     <Compile Include="Planet.cs" />
+    <Compile Include="PointerCountChangedEventArgs.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="TexFont.cs" />
-    <Compile Include="TransformMode.cs" />
     <Compile Include="Utils.cs" />
     <Compile Include="OpenGlobeRenderEngine.cs" />
   </ItemGroup>
