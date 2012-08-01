@@ -92,12 +92,12 @@ namespace OpenGlobe.Sample
             if (e.OldCount < e.NewCount && e.NewCount > 1)
             {
                 this.lastAngle = GetRotation(e.Event);
+                this.startFOV = this.renderer.FieldOfView;
             }
         }
 
         private void OnDown(object sender, TouchEventArgs e)
         {
-            this.startFOV = this.renderer.FieldOfView;
             this.canScroll = true;
         }
 
@@ -113,7 +113,7 @@ namespace OpenGlobe.Sample
 
         private void OnScroll(object sender, GestureDetector.ScrollEventArgs e)
         {
-            if (this.canScroll)
+            if (this.canScroll && !this.gestureListener.IsScaleInProgress)
             {
                 var distance = new Vector2(-e.DistanceX, -e.DistanceY);
 
