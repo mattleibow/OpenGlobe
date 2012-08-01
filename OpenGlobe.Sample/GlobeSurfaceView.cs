@@ -71,7 +71,6 @@ namespace OpenGlobe.Sample
             if (e.Event.PointerCount > 1)
             {
                 var angle = GetRotation(e.Event);
-                Console.WriteLine(angle - this.lastAngle);
                 this.renderer.Rotate(this.lastAngle - angle, this.density);
                 this.lastAngle = angle;
             }
