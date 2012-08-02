@@ -63,7 +63,13 @@ namespace OpenGlobe.Sample
             this.gestureListener.Down += OnDown;
             this.gestureListener.Move += OnMove;
 
+            this.gestureListener.SingleTapUp += OnSingleTapUp;
             this.gestureListener.PointerCountChanged += OnPointerCountChanged;
+        }
+
+        private void OnSingleTapUp(object sender, TouchEventArgs e)
+        {
+            var overlay = this.renderer.GetOverlayAt(new Vector2(e.Event.GetX(), e.Event.GetY()));
         }
 
         private void OnMove(object sender, TouchEventArgs e)

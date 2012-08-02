@@ -18,7 +18,7 @@ namespace OpenGlobe
 
             this.Label = null;
             this.DotScale = new Vector2(0.1F, 0.1F);
-            this.LabelScale = new Vector2(1F, 1F);
+            this.LabelScale = new Vector2(2F, 2F);
         }
 
         public string Label { get; set; }

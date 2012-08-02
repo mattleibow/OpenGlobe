@@ -82,5 +82,10 @@ namespace OpenGlobe
 
             return matrix;
         }
+
+        public static Vector3 Offset(this Vector3 v, float x = 0, float y = 0, float z = 0)
+        {
+            return new Vector3(v.X + x, v.Y + y, v.Z + z);
+        }
     }
 }

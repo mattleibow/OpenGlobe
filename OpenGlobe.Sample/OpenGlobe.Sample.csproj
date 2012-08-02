@@ -72,9 +72,6 @@
     <AndroidAsset Include="Assets\blueAndBrown.jpg" />
   </ItemGroup>
   <ItemGroup>
-    <AndroidResource Include="Resources\Drawable\globeOverlay.png" />
-  </ItemGroup>
-  <ItemGroup>
     <AndroidAsset Include="Assets\coolGreen.jpg" />
   </ItemGroup>
   <ItemGroup>
@@ -82,6 +79,9 @@
       <Project>{0F7828DA-2EED-4698-BBAB-2E11B48D4C83}</Project>
       <Name>OpenGlobe</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <AndroidResource Include="Resources\Drawable\globeOverlay.png" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath)\Novell\Novell.MonoDroid.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

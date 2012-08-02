@@ -8,8 +8,9 @@ namespace OpenGlobe
 
     public class WhirlyGlobeRenderEngine
     {
-        private const float ClippingNear = 0.1f;
-        private const float ClippingDistance = 20F;
+        public const float ClippingNear = 0.001f;
+        public const float ClippingDistance = 100F;
+        public const float PlanetDistance = 15.0f;
         public const float DefaultFieldOfView = 30.0F;
         private const All FillLight1 = All.Light1;
         private const All FillLight2 = All.Light2;
@@ -23,7 +24,7 @@ namespace OpenGlobe
             this.rotation = Matrix4.Identity;
 
             this.Planet = new Planet(180, 180);
-            this.Planet.Position = new Vector3(0.0f, 0.0f, -10.0f);
+            this.Planet.Position = new Vector3(0.0f, 0.0f, -PlanetDistance);
         }
 
         public float FieldOfView { get; set; }
@@ -42,10 +43,31 @@ namespace OpenGlobe
             GL.Enable(All.Normalize);
 
             // Set the OpenGL projection matrix
-            float aspectRatio = this.ViewPortSize.X / this.ViewPortSize.Y;
-            float size = ClippingNear * (float)(Math.Tan(this.FieldOfView / 180));
-            GL.Frustum(-size, size, -size / aspectRatio, size / aspectRatio, ClippingNear, ClippingDistance);
+            GL.MultMatrix(this.GetFrustumMatrix().ToArray());
             GL.MatrixMode(All.Modelview);
+        }
+
+        public Matrix4 GetFrustumMatrix()
+        {
+            float size = this.GetFieldOfViewSize();
+            float aspectRatio = this.ViewPortSize.X / this.ViewPortSize.Y;
+
+            var frustum = Matrix4.CreatePerspectiveOffCenter(
+                -size, size, -size / aspectRatio, size / aspectRatio, ClippingNear, ClippingDistance);
+
+            return frustum;
+        }
+
+        public float GetFieldOfViewSize()
+        {
+            var T = (float)Math.Tan(this.FieldOfView / 180F);
+            return ClippingNear * T;
+        }
+
+        public Matrix4 GetModelMatrix()
+        {
+            var translation = Matrix4.CreateTranslation(this.Planet.Position.X, this.Planet.Position.Y, this.Planet.Position.Z);
+            return Matrix4.Mult(this.rotation, translation);
         }
 
         /// <summary>
@@ -82,13 +104,8 @@ namespace OpenGlobe
         private void RenderPlanet()
         {
             GL.PushMatrix();
-
-            GL.Translate(this.Planet.Position.X, this.Planet.Position.Y, this.Planet.Position.Z);
-            GL.MultMatrix(this.rotation.ToArray());
-
-            float size = ClippingNear / (float)(Math.Tan(this.FieldOfView / 180));
-            this.Planet.Render(this.ViewPortSize, size);
-
+            GL.MultMatrix(this.GetModelMatrix().ToArray());
+            this.Planet.Render(this.ViewPortSize, this.FieldOfView);
             GL.PopMatrix();
         }
 
@@ -98,7 +115,7 @@ namespace OpenGlobe
         /// <param name="distance"></param>
         /// <param name="density"></param>
         public void Rotate(Vector2 distance, float density)
-        {          
+        {
             // the amount moved by the user
             float deltaX = distance.X / density / 4F;
             float deltaY = distance.Y / density / 4F;
@@ -186,6 +203,35 @@ namespace OpenGlobe
 
             this.InitLighting();
             this.FieldOfView = DefaultFieldOfView;
+        }
+
+        public Vector2 GetEarthSizeOnScreen()
+        {
+            var modelMatrix = Matrix4.Identity.ToArray();
+            var projMatrix = this.GetFrustumMatrix().ToArray();
+            var viewport = new[] { 0, 0, (int)this.ViewPortSize.X, (int)this.ViewPortSize.Y };
+
+            var points = new[] { // mid points : 
+                                   this.Planet.Position.Offset(y: +this.Planet.Radius * this.Planet.Squash), // top
+                                   this.Planet.Position.Offset(y: -this.Planet.Radius * this.Planet.Squash), // bottom
+                                   this.Planet.Position.Offset(x: -this.Planet.Radius), // left
+                                   this.Planet.Position.Offset(x: +this.Planet.Radius) // right
+                               };
+
+            var newPoints = new Vector2[4];
+
+            for (int i = 0; i < 4; i++)
+            {
+                var screenLoc = MiniGlu.Project(points[i], modelMatrix, projMatrix, viewport);
+                screenLoc.Y = viewport[3] - screenLoc.Y;
+
+                newPoints[i] = screenLoc.Xy;
+            }
+
+            var width = Math.Abs(newPoints[2].X-newPoints[3].X);
+            var height = Math.Abs(newPoints[0].Y-newPoints[1].Y);
+
+            return new Vector2(width, height);
         }
     }
 }

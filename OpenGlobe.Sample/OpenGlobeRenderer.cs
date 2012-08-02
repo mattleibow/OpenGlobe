@@ -1,5 +1,6 @@
 namespace OpenGlobe.Sample
 {
+    using System;
     using System.IO;
 
     using Android.Content;
@@ -99,12 +100,16 @@ namespace OpenGlobe.Sample
             var texOffset = new Vector2 { X = 0.25F, Y = 0F };
             this.engine.Planet.TextureOffset = texOffset;
 
+            // overlay bitmap
+            int flareSource = Utils.CreateResourceTexture(this.context, Resource.Drawable.globeOverlay);
+
+            // overlay font
             using (Stream stream = this.context.Assets.Open("TimesNewRoman.bff", Access.Buffer))
             {
-                int mFlareSource = Utils.CreateResourceTexture(this.context, Resource.Drawable.globeOverlay);
-                this.CreateOverlays(mFlareSource, new TexFont(stream));
+                this.CreateOverlays(flareSource, new TexFont(stream));
             }
 
+            // earth texture
             this.engine.Planet.TextureId = Utils.CreateAssetTexture(this.context, this.nextTexture);
         }
 
@@ -159,6 +164,43 @@ namespace OpenGlobe.Sample
                     Font = texFont
                 };
             this.engine.Planet.Overlays.Add(overlay);
+        }
+
+        public GlobeOverlay GetOverlayAt(Vector2 position)
+        {
+            // get the size of the globe
+            var earthSize = this.engine.GetEarthSizeOnScreen();
+
+            // get projection.model matrix
+            var modelMatrix = this.engine.GetModelMatrix().ToArray();
+            var projMatrix = this.engine.GetFrustumMatrix().ToArray();
+            var viewport = new[] { 0, 0, (int)this.ViewPortSize.X, (int)this.ViewPortSize.Y };
+
+            foreach (var overlay in this.engine.Planet.Overlays)
+            {
+                var screenLoc = MiniGlu.Project(overlay.Position, modelMatrix, projMatrix, viewport);
+                screenLoc.Y = viewport[3] - screenLoc.Y;
+
+                if (screenLoc.Z <= WhirlyGlobeRenderEngine.PlanetDistance)
+                {
+                    // get dot size/pos on screen
+                    float z = Math.Abs(screenLoc.Z - WhirlyGlobeRenderEngine.PlanetDistance);
+                    var dotScale = overlay.DotScale * z;
+                    var dotSizeX = earthSize.X * dotScale.X;
+                    var dotSizeY = earthSize.Y * dotScale.Y;
+                    var dotPos = new Vector2(screenLoc.X, screenLoc.Y);
+
+                    // check for hit
+                    var relX = Math.Abs(position.X - dotPos.X) + dotSizeX / 2F;
+                    var relY = Math.Abs(position.Y - dotPos.Y) + dotSizeY / 2F;
+                    if (relX < dotSizeX && relY < dotSizeY)
+                    {
+                        return overlay;
+                    }
+                }
+            }
+
+            return null;
         }
     }
 }

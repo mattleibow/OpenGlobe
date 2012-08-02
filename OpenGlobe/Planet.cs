@@ -185,7 +185,7 @@ namespace OpenGlobe
             }
         }
 
-        public void Render(Vector2 windowSize, float size)
+        public void Render(Vector2 windowSize, float fieldOfView)
         {
             GL.MatrixMode(All.Modelview);
             GL.Enable(All.CullFace);
@@ -206,6 +206,7 @@ namespace OpenGlobe
             GL.ColorPointer(4, All.Float, 0, this.colorData);
             GL.DrawArrays(All.TriangleStrip, 0, (this.Slices + 1) * 2 * (this.Stacks - 1) + 2);
 
+            var size = this.GetOverlaySize(fieldOfView);
             foreach (GlobeOverlay p in this.Overlays)
             {
                 this.ExecuteOverlay(p, windowSize, size);
@@ -216,20 +217,27 @@ namespace OpenGlobe
             GL.DisableClientState(All.TextureCoordArray);
         }
 
+        public float GetOverlaySize(float fieldOfView)
+        {
+            var T = (float)Math.Tan(fieldOfView / 180F);
+            return 1F / (-this.Position.Z * T);
+        }
+
         private void ExecuteOverlay(GlobeOverlay overlay, Vector2 windowSize, float size)
         {
             Vector3 screenLoc = MiniGlu.GetScreenLocation(overlay.Position);
-            if (screenLoc.Z <= 10F)
+            if (screenLoc.Z <= -this.Position.Z)
             {
                 float x = screenLoc.X - windowSize.X / 2F;
                 float y = screenLoc.Y - windowSize.Y / 2F;
+                float z = Math.Abs(this.Position.Z + screenLoc.Z);
 
-                var dotScale = DrawScale(size, overlay.DotScale, screenLoc.Z);
+                var dotScale = DrawScale(size, overlay.DotScale, z);
                 var dotPos = new Vector2(x, -y);
                 Utils.RenderTextureAt(dotPos, windowSize, overlay.DotTexture, dotScale, overlay.DotColor);
 
-                var labelScale = DrawScale(size, overlay.LabelScale, screenLoc.Z);
-                var textPos = new Vector3(screenLoc.X, windowSize.Y - screenLoc.Y, -10);
+                var labelScale = DrawScale(size, overlay.LabelScale, z);
+                var textPos = new Vector3(screenLoc.X, windowSize.Y - screenLoc.Y, this.Position.Z);
                 this.RenderConstName(overlay, textPos, labelScale, overlay.LabelColor);
             }
         }
@@ -255,7 +263,7 @@ namespace OpenGlobe
         private static Vector2 DrawScale(float size, Vector2 vector, float z)
         {
             Vector2 scaledSize = vector * size;
-            Vector2 drawScale = scaledSize * (10F - z);
+            Vector2 drawScale = scaledSize * z;
             return drawScale;
         }
 
